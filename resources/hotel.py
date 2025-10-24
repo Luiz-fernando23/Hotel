@@ -1,36 +1,46 @@
-from flask_restful import Resource, reqparse 
+from flask_restful import Resource, reqparse
 from models.hotel import HotelModel
-
-
-
-hoteis = [
-    {
-        'hotel_id': 'alpha',
-        'nome': 'Alpha hotel',
-        'estrela':4.3,
-        'diaria': 230.23,
-        'cidade': 'Rio de janeiro'
-    },
-        {
-        'hotel_id': 'bravo',
-        'nome': 'Bravo hotel',
-        'estrela':7.3,
-        'diaria': 500.21,
-        'cidade': 'Santa Catarina '
-    },
-        {
-        'hotel_id': 'charlie',
-        'nome': 'Charlie hotel',
-        'estrela':4.3,
-        'diaria': 230.23,
-        'cidade': 'Santa Catarina '
-    }
-]
-
+from flask_jwt_extended import jwt_required
+ 
 class Hoteis(Resource):
-
+ 
+    path_params = reqparse.RequestParser() 
+    path_params.add_argument('cidade', type=str, default="",location='args') 
+    path_params.add_argument('estrelas_min', type=float, default=0, location='args') 
+    path_params.add_argument('estrelas_max', type=float, default=0, location='args')
+    path_params.add_argument('diaria_min', type=float, default=0, location='args') 
+    path_params.add_argument('diaria_max', type=float, default=0, location='args') 
+    path_params.add_argument("itens",type=float, default=3, location="args") 
+    path_params.add_argument("pagina",type=float, default=1, location="args") 
+ 
     def get(self):
-        return {'hoteis': [hotel.json() for hotel in HotelModel.query.all()]} 
+        meus_filtros = Hoteis.path_params.parse_args()
+ 
+        query = HotelModel.query 
+ 
+        if meus_filtros["cidade"]:
+            query = query.filter(HotelModel.cidade == meus_filtros["cidade"])
+        if meus_filtros["estrelas_min"]:
+            query = query.filter(HotelModel.estrelas >= meus_filtros["estrelas_min"])
+        if meus_filtros["estrelas_max"]:
+            query = query.filter(HotelModel.estrelas <= meus_filtros["estrelas_max"])
+        if meus_filtros["diaria_min"]:
+            query = query.filter(HotelModel.diaria >= meus_filtros["diaria_min"])
+        if meus_filtros["diaria_max"]:
+            query = query.filter(HotelModel.diaria <= meus_filtros["diaria_max"])
+        
+        page = meus_filtros['pagina']
+        per_page = meus_filtros['itens']
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+ 
+        resultado_hotel = [hotel.json() for hotel in pagination.items]
+ 
+        return {
+            "hotéis": resultado_hotel,
+            "quantidade de itens": pagination.total,
+            "quantidade de paginas": pagination.pages,
+            "pagina atual": page
+        }
 
 class Hotel(Resource):
     argumentos = reqparse.RequestParser()
@@ -45,6 +55,7 @@ class Hotel(Resource):
             return hotel.json()
         return {'message': 'Hotel not found.'}, 404
     
+    @jwt_required()
     def post(self, hotel_id):
         if HotelModel.find_hotel(hotel_id):
             return {"message": "Hotel_id '{}' already exists.".format(hotel_id)}, 400
@@ -57,7 +68,7 @@ class Hotel(Resource):
             return {'message': 'An internal error ocurred trying to save hotel.'}, 500
         return hotel.json()
     
-    
+    @jwt_required()
     def put(self, hotel_id):
 
         dados = Hotel.argumentos.parse_args()
@@ -75,7 +86,7 @@ class Hotel(Resource):
         return hotel.json(), 201
         
         
-
+    @jwt_required()
     def delete(self, hotel_id):
        hotel = HotelModel.find_hotel(hotel_id)
        if hotel:
