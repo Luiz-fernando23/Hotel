@@ -10,16 +10,13 @@ Cadastro de hotéis
 
 CRUD completo de hotéis
 
-Estrutura organizada em controllers, routes, validations, serializers, parsers e constants
-
 🚀 Tecnologias Utilizadas
 
 Python
 
-FastAPI (ou Flask/Django REST, caso queira editar depois)
+Flask
 
-SQL/Oracle/MySQL/PostgreSQL (adaptar conforme seu banco)
+SQL/SQLite
 
 JWT para autenticação
 
-Pydantic (se usar FastAPI)
